@@ -696,3 +696,27 @@ type IntMap v = Map.Map Int v-- now you can do this:
 -- and results use Right.
 -- book has example with "locker lookup" functions
 -- Recursive data structures
+-- Constructor in an algebraic data type can have 0 or more fields and each
+-- field most be a concrete type, as we've seen. You can also create *recursive*
+-- data types. Think about [5]. It's really just 5:[]. So, a list can be an
+-- empty list or an element joined with : and another list with 0 or more
+-- elements.
+-- So, you can implement a list like this:
+-- data List a = Empty | Cons a (List a) deriving (Show, Read, Eq, Ord)
+-- To more match the syntax of the actual list type, you can automatically
+-- define a function as infix by making them comprised only of special
+-- characters. You can do the same with constructors since they're functions
+-- that return a data type. Turtles all the way down ...
+infixr 5 :-:
+data List a = Empty | a :-: (List a) deriving (Show, Read, Eq, Ord)
+infixr 5 .++
+(.++) :: List a -> List a -> List a
+Empty .++ ys = ys
+(x :-: xs) .++ ys = x :-: (xs .++ ys)
+-- Notice the "fixity declaration". If you want, you can give operator functions
+-- a fixity which states how tightly the operator binds and whether it's left or
+-- right associative. Higher number means tighter binding (same as higher
+-- precedence?). Pattern matching is actually about matching constructors. 8 or
+-- 'a' are basically constructors for numeric and character types.
+-- Book goes over implementation of binary search tree
+-- Typeclasses 102
