@@ -685,7 +685,8 @@ type AssocList k v = [(k, v)]
 
 -- you can also partially apply type parameters to get new type constructors
 -- from them, just like you can partially apply functions
-type IntMap v = Map.Map Int v-- now you can do this:
+type IntMap v = Map.Map Int v -- now you can do this:
+
 -- Map.fromList [(1, "hi"), (2, "bye")] :: IntMap String
 -- another cool data type that takes two types as parameters: Either a b type
 -- roughly:
@@ -708,11 +709,18 @@ type IntMap v = Map.Map Int v-- now you can do this:
 -- characters. You can do the same with constructors since they're functions
 -- that return a data type. Turtles all the way down ...
 infixr 5 :-:
-data List a = Empty | a :-: (List a) deriving (Show, Read, Eq, Ord)
+
+data List a
+  = Empty
+  | a :-: (List a)
+  deriving (Show, Read, Eq, Ord)
+
 infixr 5 .++
+
 (.++) :: List a -> List a -> List a
 Empty .++ ys = ys
 (x :-: xs) .++ ys = x :-: (xs .++ ys)
+
 -- Notice the "fixity declaration". If you want, you can give operator functions
 -- a fixity which states how tightly the operator binds and whether it's left or
 -- right associative. Higher number means tighter binding (same as higher
@@ -720,3 +728,70 @@ Empty .++ ys = ys
 -- 'a' are basically constructors for numeric and character types.
 -- Book goes over implementation of binary search tree
 -- Typeclasses 102
+-- This is how Eq class defined in standard Prelude:
+{- class Eq a where
+    (==) :: a -> a -> Bool
+    (/=) :: a -> a -> Bool
+    x == y = not (x /= y)
+    x /= y = not (x == y)
+-}
+-- a is the type variable, will be instance of Eq
+-- Didn't have to implement function bodies (or implement recursively), but we
+-- will see soon how that helps
+-- Here's how you make a type an instance of Eq by hand instead of deriving if
+-- you want:
+data TrafficLight
+  = Red
+  | Yellow
+  | Green
+
+instance Eq TrafficLight where
+  Red == Red = True
+  Green == Green = True
+  Yellow == Yellow = True
+  _ == _ = False
+
+-- Recursive definition helps, since now we don't have to define /=
+-- Let's make it an instance of Show, too
+instance Show TrafficLight where
+  show Red = "Stop!"
+  show Yellow = "Speed up!"
+  show Green = "Go go go!"
+-- You can also make typeclasses subclasses of other typeclasses. Here's start
+-- of Num:
+-- class (Eq a) => Num a where
+--    ...
+-- Essentially says that you must make a type an instance of Eq before you can
+-- make it an instance of Num
+--
+-- But, how are Maybe and other list types made instances of typeclasses?
+-- They're type constructors, not concrete types ...
+-- In definition of Eq, "a" is used as a concrete type because all types in
+-- functions have to be concrete
+-- Instead of just doing s/a/Maybe/, which is not allowed because Maybe isn't
+-- concrete, you can do this:
+{-
+instance Eq (Maybe m) where
+    Just x == Just y = x == y
+    Nothing == Nothing = True
+    _ == _ = False
+-}
+-- This says that we make all types of the form Maybe something an instance of
+-- Eq.
+-- However, this is incorrect. We have no assurance that what the Maybe contains
+-- can be used with Eq. So, I could be calling == on something that can't be
+-- equated.
+-- Instead, we must do something like this, adding a class constraint:
+{-
+instance (Eq m) => Eq (Maybe m) where
+    Just x == Just y = x == y
+    Nothing == Nothing = True
+    _ == _ = False
+-}
+-- Now, we're sure that x and y of type m can be equated.
+-- In general, you must make sure that things in functions are of concrete types
+-- by making the modifications seen above.
+-- :info YourTypeClass in GHCI will show you what the instances of a typeclass
+-- are. Works for types and type constructors, too, or type declaration of a
+-- function.
+-- A Yes-No typeclass
