@@ -757,6 +757,7 @@ instance Show TrafficLight where
   show Red = "Stop!"
   show Yellow = "Speed up!"
   show Green = "Go go go!"
+
 -- You can also make typeclasses subclasses of other typeclasses. Here's start
 -- of Num:
 -- class (Eq a) => Num a where
@@ -795,3 +796,162 @@ instance (Eq m) => Eq (Maybe m) where
 -- are. Works for types and type constructors, too, or type declaration of a
 -- function.
 -- A Yes-No typeclass
+-- In weakly typed languages, you can put almost anything inside an if
+-- statement. Let's do this in Haskell.
+class YesNo a where
+  yesno :: a -> Bool
+
+instance YesNo Int where
+  yesno 0 = False
+  yesno _ = True
+
+instance YesNo [a] where
+  yesno [] = False
+  yesno _ = True
+
+instance YesNo Bool where
+  yesno = id
+
+-- id is just a function that takes a parameter and returns the same thing
+instance YesNo (Maybe a) where
+  yesno (Just _) = True
+  yesno Nothing = False
+-- no class constraint needed above because we made noa ssumptions about
+-- contents of the Maybe
+-- The Functor typeclass
+-- list type is part of Functor typeclass
+-- here's a peek at how Functor typeclass is implemented
+{-
+class Functor f where
+    fmap :: (a -> b) -> f a -> f b
+-}
+-- interesting - this is the first typeclass we've seen where it's not a
+-- concrete type - it's a type constructor (like Maybe a)
+-- look at type signature of map:
+-- map :: (a -> b) -> [a] -> [b]
+-- map is just an fmap that works over lists
+-- types that can act like a "box" can be functors. Thus, Maybe a is also a
+-- functor. Here's how it's a functor:
+{-
+instance Functor Maybe where
+    fmap f (Just x) = Just (f x)
+    fmap f Nothing = Nothing
+-}
+-- note that you don't put Maybe m, because Functor wants a type constructor
+-- that takes one type, not a concrete type.
+-- What about Either a b? It takes two types. Let's partially apply it to make a
+-- functor.
+{-
+instance Functor (Either a) where
+    fmap f (Right x) = Right (f x)
+    fmap f (Left x) = Left x
+-}
+-- This is necessary. Remember Either a b has two types. If you wanted to map
+-- one function over both Left a and Right b, a and b would have to be the same
+-- type. So, partial application helps here.
+-- TODO Study the above and map it to the previous section about typeclasses.
+-- Data.Map's fmap will go from Map k v to Map k v'
+-- TODO Exercise: Try to make Map k an instance of Functor by yourself
+-- Note: Functors must obey some laws so they have some properties we can depend
+-- on. Will go over those in a later chapter.
+-- Kinds and some type-foo
+-- This section goes over formally defining how types are applied to type
+-- constructors, just like we took a look at formally defining how values are
+-- applied to functions using type declarations. This section is optional for
+-- continuing on your Haskell journey.
+-- Just as values have "type" labels, types have their own labels called
+-- "kinds." A "kind" is sort of like a type of a type.
+-- :k in GHCI for kind information
+-- * means a concrete type
+-- * -> * means it takes one concrete type and returns a concrete type
+-- Functor wants types of kind * -> *
+-- Input and Output
+--   Haskell has a system that separates side effects, like IO, from the purely
+--   functional, idempotent parts of the program.
+-- hello world program in helloworld.hs
+-- if you look at :t putStrLn, it's:
+-- putStrLn :: String -> IO ()
+--   putStrLn takes a string and returns an I/O action that has a result type of
+--   () (empty tuple or "unit"). so, I/O carries some sort of return value
+--   inside it
+--
+-- so, when does I/O actually get performed? I/O is performed when we give it
+-- a name of "main" and run the program
+-- this is kind of limiting to have whole program be 1 I/O action, so we use
+-- "do" syntax to glue several I/O actions into one:
+{-
+main = do
+    putStrLn "Hello, what's your name?"
+    name <- getLine
+    putStrLn ("Hey " ++ name ++ ", you rock!")
+-}
+-- last I/O has type of IO (), so the action we got has a type of IO ().
+-- so, main has type of IO something, where something is a concrete type. We
+-- usually don't specify a type declaration for main.
+-- note name <- getLine. we haven't seen this syntax before. if you look at :t
+-- getLine, it's IO String. <- means "perform the IO action getLine and bind its
+-- result value to name". You can only call <- from within an I/O action. This
+-- is how Haskell separates pure parts of code from side effects. getLine is
+-- impure because the value may not be hte same when performed twice. Note in
+-- the last line of the above, we don't bind the last putStrLn to anything. In a
+-- "do" block, the last action cannot be bound to a name with <-. For now, think
+-- that this is the case because the do block automatically extracts the value
+-- from the last action and binds it to its own result.
+-- Recall that in list comprehensions, for let expressions, the "in" clause
+-- isn't necessary. The same holds true for do blocks:
+{-
+import Data.Char
+
+main = do
+    putStrLn "What's your first name?"
+    firstName <- getLine
+    putStrLn "What's your last name?"
+    lastName <- getLine
+    let bigFirstName = map toUpper firstName
+        bigLastName = map toUpper lastName
+    putStrLn $ "hey " ++ bigFirstName ++ " " ++ bigLastName ++ ", how are you?"
+-}
+-- you can use "runhaskell" instead of compiling with ghc if you want
+-- read line and reverse words example below. note that both cases of the if
+-- statement must perform an I/O action, because last line in an I/O do block must do
+-- an I/O action (note: type of "return" is actually monadic ... so not true for
+-- all do blocks, it seems?)
+{-
+main = do
+    line <- getLine
+    if null line
+        then return ()
+        else do
+            putStrLn $ reverseWords line
+            main
+
+reverseWords :: String -> String
+reverseWords = unwords . map reverse . words
+-}
+-- second do block is needed because we need to wrap all this up in one I/O
+-- action
+-- "return" in haskell is nothing like return in other languages. in haskell,
+-- return makes an I/O action out of a pure value (in I/O actions specifically).
+-- in other words, it puts it in an I/O box, to use the box analogy from
+-- earlier.
+-- return *does not* cause the do block to end execution. all it does is make
+-- I/O actions that don't do anything. "return" is kind of the opposite of <-.
+-- some useful I/O functions:
+-- Control.Monad.when: takes a boolean and I/O action. returns same I/O action
+-- supplied if boolean is true, or returns return () action. useful for patterns
+-- like the example above.
+-- sequence: takes a list of I/O actions and returns an I/O action that performs
+-- those one after another. useful with map functions:
+-- sequence (map print [1,2,3,4,5])
+-- this pattern is so common that mapM and mapM_ were introduced.
+-- mapM takes a function and list, maps functions over list and then sequences
+-- it. mapM_ does the same but throws away the result. (the above sequence call
+-- returns [(), (), (), (), ()] as result of I/O for example, we don't care
+-- about that really)
+-- Control.Monad.forever
+-- Control.Monad.forM is like mapM with parameters switched around
+-- TODO build a function for text lookahead in haskell
+-- Think of forM as meaning: make an I/O action for every element in this list.
+-- Perform those actions and bind their results to something.
+-- Files and streams
+-- getContents is lazy read from stdin until EOF. useful for pipes
