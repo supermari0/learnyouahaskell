@@ -955,3 +955,109 @@ reverseWords = unwords . map reverse . words
 -- Perform those actions and bind their results to something.
 -- Files and streams
 -- getContents is lazy read from stdin until EOF. useful for pipes
+-- can use the above to print something line by line. doing <- is more of a
+-- promise to do I/O when it's really needed, in this case. so you might not
+-- actually do the I/O until something like putStr needs it.
+-- pattern: get string from input, transform with function, and output it.
+-- interact takes a String -> String function, returns an I/O action that will
+-- take input, run a function on it, and print it out
+-- example:
+-- main = interact $ unlines . filter ((<10) . length) . lines
+-- can use for interactive programs or for piping input to this
+-- works for both because of laziness - haskell waits to print first line of
+-- output until it has first line of input
+-- files
+-- this just reads a file and writes it to stdout
+{-
+import System.IO
+
+main = do
+    handle <- openFile "girlfriend.txt" ReadMode
+    contents <- hGetContents handle
+    putStr contents
+    hClose handle
+-}
+-- another way to do this:
+{-
+import System.IO
+
+main = do
+    withFile "girlfriend.txt" ReadMode (\handle -> do
+        contents <- hGetContents handle
+        putStr contents)
+-}
+-- also have hGetLine, hPutStr, hPutStrLn, etc.
+-- readFile, writeFile, appendFile functions also exist since those are so
+-- common
+-- lazy buffering depends on the file type. for text files, usually
+-- line-by-line. for binary files, block-by-block.
+-- you can control this with hSetBuffering function. hFlush will flush the
+-- buffer.
+-- TODO: I think there's a bug in the to-do list example in the book when you
+-- have duplicate items in the to-do list. Investigate and fix. Maybe file a bug
+-- or email book writer if it is indeed a bug.
+-- command line arguments
+-- System.Envrionment.getArgs and System.Environment.getProgName
+-- see todo.hs for to do list command line program example
+-- randomness
+-- System.Random module
+-- random function
+-- random :: (RandomGen g, Random a) => g -> (a, g)
+-- need to tell Haskell the types so it can figure out what kind of random
+-- variable to give you
+-- random (mkStdGen 100) :: (Int, StdGen)
+-- since random is a pure function, it will give you back the same number when
+-- passed the same RandomGen. so, you can pass it the StdGen that gets returned
+-- in the previous call
+-- randoms function returns an infinite sequence of random data based on the
+-- generator
+-- randomR, randomRs - random within a range
+-- to avoid having to use a fixed seed value, use System.Random.getStdgen :: IO
+-- StdGen. don't use it twice, though; use newStdGen action to split current
+-- generator into two
+-- bytestrings
+-- think of lists as promises to return a value. [1,2,3,4] is really 1:2:3:4:[],
+-- so when you ask for first value of list, 2:3:4:[] doesn't have to get
+-- evaluated yet because haskell is lazy. this can have performance detriments
+-- when you have to evaluate each promise separately everytime.
+-- "thunk" is technical term for "promise"
+-- this is why Haskell has bytestrings. two types of bytestrings:
+-- Data.ByteString - strict
+-- Data.ByteString.Lazy - lazy, but not as lazy as a list. first 64K evaluated
+-- everytime it's needed
+-- TL;DR: using bytestrings can help with efficiency if your program's too slow
+-- and you're just using regular strings
+-- exceptions
+-- pure code can throw exceptions (like division by 0), but the handling makes
+-- more sense in an I/O context in Haskell because you're never sure
+-- when something's going to be executed due to laziness. you're usually better
+-- off using something like Either or Maybe for error handling and making full
+-- use of the type system.
+-- so, for now, we'll only look at I/O exceptions
+-- System.IO.Error
+-- catch :: IO a -> (IOError -> IO a) -> IO a
+-- first param: IO action
+-- second param: handler that gets called if an exception occurs
+-- final action: whatever to do, action itself or whatever the handler says to
+-- do on an exception
+-- example
+{-
+import System.Environment
+import System.IO
+import System.IO.Error
+
+main = toTry `catch` handler
+
+toTry :: IO ()
+toTry = do (fileName:_) <- getArgs
+            contents <- readFile fileName
+            putStrLn $ "The file has " ++ show (length (lines contents)) ++ " lines!"
+
+handler :: IOError -> IO ()
+handler e
+    | isDoesNotExistError e = putStrLn "The file doesn't exist!"
+    | otherwise = ioError e
+-}
+-- Functionally solving problems
+-- just reading this section and taking interesting notes, not writing most
+-- things down~
