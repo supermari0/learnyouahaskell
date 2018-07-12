@@ -1060,4 +1060,80 @@ handler e
 -}
 -- Functionally solving problems
 -- just reading this section and taking interesting notes, not writing most
--- things down~
+-- things down
+-- it helps to think about type declaration of something before you start
+-- implementing a function
+-- book implements a reverse polish notation calculator
+-- given road like this, where roads are marked with how long they take:
+-- ---b1 ---b2 --- c2
+--    |   |   |
+-- ---a1 ---b1 --- c1
+-- what's the fastest way to the end?
+-- find shortest path to each point. keep track of 2 possible paths until you
+-- reach the end (no more than 2 possible ones because you start each step at
+-- one of 2 points, and you know the cheapest path to that point)
+-- book has implementation of that solution
+-- Functors, Applicative Functors, and Monoids
+-- Haskell's purity, higher order fns, parameterized ADTs, and typeclasses let
+-- us implement polymorphism on a higher level possible than in other languages.
+-- Don't have to think about type hierarchies. Int can act like a lot of things.
+-- Functors have the property that they can be mapped over; that's a pretty
+-- abstract property for a type to have.
+-- Functors redux
+-- A more accurate descriptor of a functor than a "box" is a "computational
+-- context." Functors implement fmap:
+-- fmap :: (a -> b) -> f a -> f b
+-- with f being the "box"
+-- if we want to make a type constructor an instance of functor, it has to have
+-- kind * -> * (thus f a and f b in the type signature for fmap)
+-- for things like Either, you have to partially apply the type constructor
+-- until it takes just 1 parameter
+-- in this section, we look at 2 more instances of Functor: IO and (->) r.
+-- this is how IO is an instance of Functor
+{-
+instance Functor IO where
+    fmap f action = do
+        result <- action
+        return (f result)
+-}
+-- (->) r
+-- the function type r -> a can be rewritten as (->) r a
+-- so, (->) is basically just a type constructor that takes 2 type parameters,
+-- just like Either. since you can't make a type constructor an instance of
+-- functor if it takes 2 type parameters, partially applying (->) with (->) r
+-- makes it have 1 type parameter
+-- how are functions functors? here's the implementation, in
+-- Control.Monad.Instances
+{-
+instance Functor ((->) r) where
+    fmap f g = (\x -> f (g x))
+-}
+-- another way to write this:
+{-
+instance Functor ((->) r) where
+    fmap = (.)
+-}
+-- this and IO show how things that act more like computations can also be
+-- functors - not just "boxes" like Maybe
+-- before going onto rules fmap should follow, think about type of fmap a little
+-- more
+-- (Functor f) => fmap :: (a -> b) -> f a -> f b
+-- now, remember, all haskell functions only take 1 parameter. they're just
+-- curried.
+-- you can rewrite that typedef as:
+-- fmap :: (a -> b) -> (f a -> f b)
+-- so you get a function that takes a function and returns a function that takes
+-- one functor as parameter and returns another as a result (f a -> f b)
+-- this is called "lifting a function"
+-- if you have something like fmap (*2), you get a function that takes a functor
+-- f over numbers and returns a functor over numbers
+-- now, going into functor laws. these aren't enforced by haskell
+-- 1. if you map id over a functor, you should get back the original functor
+-- 2. composing two functions and then mapping the resulting function over a
+--    functor should be the same as mapping one function over the functor and
+--    then mapping the other one. in other words, fmap (f . g) = fmap f . fmap g
+-- book has an example of bad behavior that happens when a "functor" doesn't
+-- obey these laws
+-- Applicative functors
+-- Applicative typeclass in the Control.Applicative module
+--
