@@ -1136,4 +1136,117 @@ instance Functor ((->) r) where
 -- obey these laws
 -- Applicative functors
 -- Applicative typeclass in the Control.Applicative module
---
+-- As you know, functions are curried by default so that all functions only
+-- take 1 parameter
+--    When we mapped functions over functors, we mapped functions that only took
+--    1 parameter. But what happens when we map a function that takes more than
+--    1 parameter over a functor?
+-- Example: fmap (*) (Just 3) results in Just (* 3)
+--    By mapping "multi-parameter" functions over functors, you get functors
+--    with functions inside of them. Then, you can map a function that takes
+--    those functions as parameters and apply them:
+{-
+ghci> let a = fmap (*) [1,2,3,4]
+ghci> :t a
+a :: [Integer -> Integer]
+ghci> fmap (\f -> f 9) a
+[9,18,27,36]
+-}
+-- what if i want to apply Just (*3) to Just 5? Applicative typeclass inside
+-- Control.Applicative helps us do this:
+{-
+class (Functor f) => Applicative f where
+    pure :: a -> f a
+    (<*>) :: f (a -> b) -> f a -> f b
+-}
+-- pure takes a value and puts it in the applicative functor
+-- <*> is like a beefed up fmap. applies function inside functor onto value in
+-- second functor, sort of. here's how we make Maybe an applicative functor
+{-
+class (Functor f) => Applicative f where
+    pure :: a -> f a
+    (<*>) :: f (a -> b) -> f a -> f b
+-}
+-- now we can do:
+{-
+ghci> Just (+3) <*> Just 9
+Just 12
+ghci> pure (+3) <*> Just 9
+Just 12
+-}
+-- this allows us to take normal functions and apply them in a functor context.
+-- neat! pure f <*> x must equal fmap f x. this is an applicative functor law
+-- Control.Applicative also exports a function called <$> which is just fmap as
+-- infix operator. see:
+{-
+(<$>) :: (Functor f) => (a -> b) -> f a -> f b
+f <$> x = fmap f x
+-}
+-- this is nice because it allows you to this if you want to apply a function to
+-- multiple applicative functors (x, y, z applicative functors, f is a normal
+-- function):
+-- f <$> x <*> y <*> z
+-- The list type constructor [] is also an applicative functor. check it out:
+-- Prelude> [(+1)] <*> [1,2,3]
+-- [2,3,4]
+-- even cooler:
+{-
+ghci> (*) <$> [2,5,10] <*> [8,10,11]
+[16,20,22,40,50,55,80,100,110]
+-}
+-- IO is also an applicative functor
+-- these two are equivalent:
+{-
+myAction :: IO String
+myAction = do
+    a <- getLine
+    b <- getLine
+    return $ a ++ b
+myAction :: IO String
+myAction = (++) <$> getLine <*> getLine
+-}
+-- the latter is preferred because it's more concise. use it when you want to
+-- apply a function on some IO result and present it with "return"
+-- (->) r is also an applicative functor
+-- example: (+) <$> (+3) <*> (*100) $ 5
+-- TODO how is (+) a (->) r? isn't it (Num a, b) => a -> b or whatever the
+-- syntax for that is?
+-- ZipList is also a member of Applicative
+-- normal list <*> does all possible combinations of functions with the list
+-- values, but you could also do equivalent of a python zip()
+-- getZipList function applied to a ZipList will give you back a regular list
+-- result of <*> on zip list always has shorter length of the two lists
+{-
+ghci> getZipList $ (,,) <$> ZipList "dog" <*> ZipList "cat" <*> ZipList "rat"
+[('d','c','r'),('o','a','a'),('g','t','t')]
+-}
+-- (,,) is the same as \x y z -> (x, y, z)
+-- you also have zipWith2, zipwith3, all the way up to 7 for functions that take
+-- that many parameters
+-- Control.Applicative also has this
+{-
+liftA2 :: (Applicative f) => (a -> b -> c) -> f a -> f b -> f c
+liftA2 f a b = f <$> a <*> b
+-}
+-- liftA2 takes a normal binary function and promotes it to a function that
+-- operaton two functors
+-- sequenceA implementation for lists:
+-- sequenceA :: (Applicative f) => [f a] -> f [a]
+-- sequenceA (x:xs) = (:) <$> x <*> sequenceA xs
+-- so, sequenceA [Just 1, Just 2] becomes Just [1, 2]. Neat!
+-- alternatively, you can do this:
+-- sequenceA = foldr (liftA2 (:)) (pure [])
+-- this is very useful when you have a list of functions and want to feed same
+-- input to all of them and view the results. of course, all functions have to
+-- be of the same type. to really grok sequenceA, look what happens when you use
+-- it on a list of lists.
+-- when used with IO actions, sequenceA is the same thing as sequence.
+-- applicative functor laws:
+{-
+1. pure f <*> x = fmap f x
+2. pure id <*> v = v
+3. pure (.) <*> u <*> v <*> w = u <*> (v <*> w)
+4. pure f <*> pure x = pure (f x)
+5. u <*> pure y = pure ($ y) <*> u
+-}
+-- The newtype keyword
