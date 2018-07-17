@@ -1250,3 +1250,68 @@ liftA2 f a b = f <$> a <*> b
 5. u <*> pure y = pure ($ y) <*> u
 -}
 -- The newtype keyword
+-- we know how to make ADTs with "data" keyword, and we also know how to give
+-- types synonyms with the "type" keyword. now, we're learning the newtype
+-- keyword to make new types out of existing types
+-- recall: more ways than 1 for list type to be an applicative functor. one way
+-- is to have <*> do all possible combinations, the second is to zip
+-- how would we make a ZipList type?
+-- possibilities:
+{-
+data ZipList a = ZipList [a] -- value constructor
+data ZipList a = ZipList { getZipList :: [a] } -- record syntax
+newtype ZipList a = ZipList { getZipList :: [a] }
+-}
+-- why use newtype instead to wrap the existing list type?
+-- it's faster, don't have to wrap and unwrap everything since haskell knows you
+-- want same internals
+-- don't want to use this all the time, though, because it's limited to having
+-- one value constructor that only has one field
+-- you can also use "deriving" keyword with newtype
+-- using newtype to make type class instances
+-- tldr: use newtype and pattern match in instance declaration; example shows
+-- how to make a tuple a functor with fmap applying to first value in tuple
+-- on newtype laziness
+-- where data makes your own types from scratch, newtype is more about making a
+-- direct conversion from one type to another, so it behaves differently.
+-- haskell can be lazier because it knows one type is really just another
+-- underneath the hood
+-- type vs. newtype vs. data
+-- 1. type is for direct type synonyms to make things easier to reference. you
+-- don't even get a new value constructo
+-- 2. newtype described above, mostly to make it easier to make them instances
+--    of certain type classes. they behave as separate types, though, unlike
+--    with the type keyword. consider newtype when you're making a data
+--    declaration.
+-- 3. data keyword is for all other cases
+-- Monoids
+-- when we make types, we think about what behaviors it supports and add it
+-- to a typeclass.
+-- consider: * takes two numbers and multiplies them. has properties like
+-- multiplying by 1 always giving back the same number. ++ also takes two
+-- things and returns a third, and it has a value that never changes the
+-- other one when used with ++ (empty list []).
+-- a monoid is when you have an associative binary function and a value which
+-- acts as identity with respect to that function.
+-- now we introduce the Monoid typeclass from Data.Monoid:
+-- class Monoid m where
+--   mempty :: m
+--   mappend :: m -> m -> m
+--   mconcat :: [m] -> m
+--   mconcat = foldr mappend mempty
+-- mempty is identity value
+-- mappend is the binary function. most monoids don't append, so just think
+-- of this as the binary function even though ++ appends
+-- mconcat takes a list of monoid values and reduces them to a single value
+-- by doing mappend between the list elements.
+-- monoid laws:
+-- 1. mempty `mappend` x = x
+-- 2. x `mappend` mempty = x
+-- 3. (x `mappend` y) `mappend` z = x `mappend` (y `mappend` z)
+-- haskell doesn't enforce these, so programmers must be careful to make sure
+-- they work
+--
+-- Lists are monoids. mempty = [] and mappend = (++)
+-- You get mconcat for free since it has a default implementation
+-- Product and Sum types
+--
