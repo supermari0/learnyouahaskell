@@ -1229,7 +1229,7 @@ liftA2 :: (Applicative f) => (a -> b -> c) -> f a -> f b -> f c
 liftA2 f a b = f <$> a <*> b
 -}
 -- liftA2 takes a normal binary function and promotes it to a function that
--- operaton two functors
+-- operates on two functors
 -- sequenceA implementation for lists:
 -- sequenceA :: (Applicative f) => [f a] -> f [a]
 -- sequenceA (x:xs) = (:) <$> x <*> sequenceA xs
@@ -1313,5 +1313,54 @@ newtype ZipList a = ZipList { getZipList :: [a] }
 --
 -- Lists are monoids. mempty = [] and mappend = (++)
 -- You get mconcat for free since it has a default implementation
--- Product and Sum types
+-- Product and Sum types:
+-- (+) for binary function with identity value 0 is another way of making
+-- numbers a monoid, in addition to the (*) example described earlier
+-- Data.Monoid exports Product and Sum types
+-- Product defined like this, and made a Monoid something like the below:
+{-
+newtype Product a =  Product { getProduct :: a }
+    deriving (Eq, Ord, Read, Show, Bounded)
+instance Num a => Monoid (Product a) where
+    mempty = Product 1
+    Product x `mappend` Product y = Product (x * y)
+-}
+-- instance declaration means that Product a is an instance of Monoid for all
+-- a's that are already an instance of Num
+-- Any, All, Ordering are also instances of Monoid. Ordering is odd but useful,
+-- see book for details. (basically, mappend just keeps left parameter unless
+-- it's EQ, in which case right one is kept. this is useful for comparing things
+-- by many different criteria and putting those criteria in priority order.)
+-- Maybe a can also be an instance of Monoid in several different ways.
+-- If a is not itself a Monoid, then First is a good way to see if you have a
+-- bunch of Maybe values and just want to know if any of them is a Just value
 --
+-- Using monoids to fold data structures
+-- Lists aren't the only data structure over which we can fold. Trees are good
+-- for this too.
+-- Because there are so many data structures that can be folded over, the
+-- Foldable typeclass was introduced. It's in Data.Foldable, import it qualified
+-- since it conflicts with a lot of Prelude
+-- easier way to make something Foldable than implementing foldr is to write
+-- foldMap for it:
+-- foldMap :: (Monoid m, Foldable t) => (a -> m) -> t a -> m
+-- first parameter takes a value of the type the foldable structure contains and
+-- returns a monoid value. second parameter is the foldable structure containing
+-- the values. function in first parameter gets mapped over the foldable
+-- structure in parameter 2, producing a foldable structure that contains monoid
+-- values. then, by doing mappend, all those are joined to a single monoid
+-- value. this is all you need to make something foldable, then you get foldr
+-- and foldl for free!
+-- here's how you do it for Tree:
+{-
+instance F.Foldable Tree where
+    foldMap f Empty = mempty
+    foldMap f (Node x l r) = F.foldMap f l `mappend`
+                              f x           `mappend`
+                              F.foldMap f r
+-}
+-- now you can do this to search the tree:
+-- getAny $ F.foldMap (\x -> Any $ x == 3) testTree
+-- or, turn your tree into a list!
+-- F.foldMap (\x -> [x]) testTree
+-- A Fistful of Monads
