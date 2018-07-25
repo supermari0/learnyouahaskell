@@ -1364,3 +1364,17 @@ instance F.Foldable Tree where
 -- or, turn your tree into a list!
 -- F.foldMap (\x -> [x]) testTree
 -- A Fistful of Monads
+-- Monads are beefed up applicative functors, just like applicative functors are
+-- beefed up functors. (Book goes into a review of applicative functors, just
+-- scroll up in notes if you need to review it again)
+-- You can think of an applicative value as a value with an added context. Just
+-- 'a' is a Char that could have been Nothing - a Maybe Char.
+-- Monads deal with this problem: if you have a value with a context m a, how do
+-- you apply it to a function that takes a normal a and returns a value with a
+-- context? In other words, we want this function:
+-- (>>=) :: (Monad m) => m a -> (a -> m b) -> m b
+-- replacing "context" with "fancy": if we have a fancy value and a function
+-- that takes a normal value and returns a fancy value, how do we feed that
+-- fancy value into the function?
+-- monads are just applicative functors that support >>= (pronounced "bind")
+-- Getting our feet wet with Maybe
