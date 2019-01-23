@@ -134,7 +134,7 @@ initials firstname lastname = [toUpper f] ++ ". " ++ [toUpper l] ++ "."
     (l:_) = lastname
 
 -- can pattern match with "where", too
-{-
+{--
 calcBmis :: (RealFloat a) => [(a, a)] -> [a]
 calcBmis xs = [bmi w h | (w, h) <- xs]
     where bmi weight height = weight / height ^ 2
@@ -172,7 +172,7 @@ calcBmis xs = [bmi | (w, h) <- xs, let bmi = w / h ^ 2]
 -- case expressions: similar to cases in c/python, but also with pattern
 -- matching,  and they're expressions so you can use them anywhere
 -- syntax:
-{-
+{--
 case expression of pattern -> result
                    pattern -> result
                    pattern -> result
@@ -506,8 +506,10 @@ decode shift msg = encode (negate shift) msg
 -- simple example: find value of key in list of (k,v)
 -- findKey :: (Eq k) => k -> [(k,v)] -> Maybe v
 -- findKey key = foldr (\(k,v) acc -> if key == k then Just v else acc) Nothing
--- TODO This won't terminate immedaitely after it finds k, right?  So would the
--- recursive solution be faster?
+-- TODO This won't terminate immediately after it finds k, right?  So would the
+-- recursive solution be faster? I think so, unless there's some sort of smart
+-- semantic optimization which could possibly be done during a compilation
+-- phase.
 -- This is the "lookup" function from Data.List
 --
 -- fromList takes a list of (k,v) and returns a Data.Map.Map k v without
@@ -542,7 +544,7 @@ decode shift msg = encode (negate shift) msg
 -- also lose list's original ordering with Set.
 -- see Geometry.hs for example of creating your own module, pretty
 -- straightforward
--- also striaghtforward for more complicated hierarhical namespacing - create
+-- also straightforward for more complicated hierarhical namespacing - create
 -- Geometry folder with files Sphere, Cube, Cuboid, call them Geometry.Sphere,
 -- Geometry.Cube ... in headers
 -- Making our own types and typeclasses
@@ -556,7 +558,7 @@ decode shift msg = encode (negate shift) msg
 -- Circle and Rectangle above aren't types, they're value constructors - type
 -- is Shape
 --
--- Value constructions are actually functions that return a value of a data
+-- Value constructors are actually functions that return a value of a data
 -- type. In the above, the Floats signify parameters to the functions that
 -- return Shapes.
 --
@@ -587,6 +589,7 @@ surface (Circle _ r) = pi * r ^ 2
 surface (Rectangle (Point x1 y1) (Point x2 y2)) =
   (abs $ x2 - x1) * (abs $ y2 - y1)
 
+-- TODO any way to export all data types?
 -- to export your data types, write type with value constructors in parens:
 -- module Shapes
 -- ( Point(..)
@@ -637,6 +640,8 @@ data Person = Person
   , lastName :: String
   , age :: Int
   } deriving (Eq, Show, Read)
+-- In other words, "deriving" makes functions associated with a typeclass
+-- delegate to the functions for the values in the typeclass
 
 -- we can now use a Person in all functions that have the Eq class constraint
 -- for the parameter
@@ -715,7 +720,7 @@ data List a
   | a :-: (List a)
   deriving (Show, Read, Eq, Ord)
 
-infixr 5 .++
+infixr 5 .++ -- fixity declaration
 
 (.++) :: List a -> List a -> List a
 Empty .++ ys = ys
@@ -816,7 +821,7 @@ instance YesNo Bool where
 instance YesNo (Maybe a) where
   yesno (Just _) = True
   yesno Nothing = False
--- no class constraint needed above because we made noa ssumptions about
+-- no class constraint needed above because we made no assumptions about
 -- contents of the Maybe
 -- The Functor typeclass
 -- list type is part of Functor typeclass
@@ -849,9 +854,11 @@ instance Functor (Either a) where
 -- This is necessary. Remember Either a b has two types. If you wanted to map
 -- one function over both Left a and Right b, a and b would have to be the same
 -- type. So, partial application helps here.
--- TODO Study the above and map it to the previous section about typeclasses.
+--
 -- Data.Map's fmap will go from Map k v to Map k v'
+
 -- TODO Exercise: Try to make Map k an instance of Functor by yourself
+
 -- Note: Functors must obey some laws so they have some properties we can depend
 -- on. Will go over those in a later chapter.
 -- Kinds and some type-foo
